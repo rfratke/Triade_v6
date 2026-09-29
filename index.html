@@ -132,1169 +132,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       --status-late-bg: #fee2e2;
     }
 
-       10. CONFIGURAÇÕES VIEW (DIRETOR)
-       ========================================== */
-    function renderSettings() {
-      const listEl = document.getElementById('deliveryTypesList');
-      if (!listEl) return;
-=======
-       12. INITIALIZATION ON DOM READY
-       ========================================== */
-    document.addEventListener('DOMContentLoaded', () => {
-      loadState();
-      if (state.currentUser) {
-        setupAppForUser();
-      } else {
-        document.getElementById('loginView').style.display = 'flex';
-        document.getElementById('appView').style.display = 'none';
-      }
-    });
-=======
-       4. DASHBOARD & TIMELINE
-       ========================================== */
-    function getFilteredActivitiesForUser() {
-      if (isDirector()) {
-        return state.activities;
-      }
-      return state.activities.filter(a => a.responsavelId === state.currentUser.id);
-    }
-
-    function renderDashboard() {
-      const activities = getFilteredActivitiesForUser();
-
-      let countDone = 0;
-      let countProgress = 0;
-      let countLate = 0;
-
-      activities.forEach(a => {
-        const eff = getEffectiveStatus(a);
-        if (eff === 'Finalizado') countDone++;
-        else if (eff === 'Em atraso') countLate++;
-        else if (eff === 'Em andamento') countProgress++;
-      });
-
-      document.getElementById('kpi-total').textContent = activities.length;
-      document.getElementById('kpi-done').textContent = countDone;
-      document.getElementById('kpi-progress').textContent = countProgress;
-      document.getElementById('kpi-late').textContent = countLate;
-
-      // Render grouped timeline
-      const today = hojeISO();
-      const in7 = addDaysISO(today, 7);
-      const in30 = addDaysISO(today, 30);
-
-      const groups = {
-        late: { label: '🚨 Em Atraso', color: 'border-late', items: [] },
-        next7: { label: '⚡ Próximos 7 Dias', color: 'border-progress', items: [] },
-        next30: { label: '📅 Próximos 30 Dias', color: 'border-progress', items: [] },
-        future: { label: '⏳ Futuras (+30 Dias)', color: 'border-start', items: [] },
-        done: { label: '✅ Concluídas Recentemente', color: 'border-done', items: [] }
-      };
-
-      activities.forEach(a => {
-        const eff = getEffectiveStatus(a);
-        if (eff === 'Finalizado') {
-          groups.done.items.push(a);
-        } else if (eff === 'Em atraso') {
-          groups.late.items.push(a);
-        } else if (a.dataFinal && a.dataFinal <= in7) {
-          groups.next7.items.push(a);
-        } else if (a.dataFinal && a.dataFinal <= in30) {
-          groups.next30.items.push(a);
-        } else {
-          groups.future.items.push(a);
-        }
-      });
-
-      // Sort items by dataFinal
-      for (const k in groups) {
-        groups[k].items.sort((x, y) => (x.dataFinal || '').localeCompare(y.dataFinal || ''));
-      }
-
-      const container = document.getElementById('timelineContainer');
-      let html = '';
-
-      const groupKeys = ['late', 'next7', 'next30', 'future', 'done'];
-
-      let hasAny = false;
-      groupKeys.forEach(key => {
-        const grp = groups[key];
-        if (grp.items.length === 0) return;
-        hasAny = true;
-
-        html += `
-          <div class="timeline-group">
-            <div class="timeline-group-header">
-              <span class="timeline-group-title">${grp.label}</span>
-              <span class="shell-badge">${grp.items.length} ${grp.items.length === 1 ? 'atividade' : 'atividades'}</span>
-            </div>
-            <div>
-        `;
-
-        grp.items.forEach(act => {
-          const plan = state.plans.find(p => p.id === act.planId);
-          const resp = state.users.find(u => u.id === act.responsavelId);
-          const eff = getEffectiveStatus(act);
-
-          html += `
-            <div class="timeline-card ${grp.color}">
-              <div style="flex: 1; min-width: 250px;">
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; color: var(--text);">
-                  ${esc(act.nome)}
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                  <span>📋 Plano: <strong>${esc(plan ? plan.nome : 'Sem plano')}</strong></span>
-                  <span>•</span>
-                  <span>👤 Responsável: <strong>${esc(resp ? resp.nome : 'Não atribuído')}</strong></span>
-                  <span class="tag-delivery">${esc(act.tipoEntrega)}</span>
-                </div>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div style="text-align: right; font-size: 0.82rem;">
-                  <div style="color: var(--text-muted);">Prazo final</div>
-                  <strong style="color: ${eff === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">${fmtData(act.dataFinal)}</strong>
-                </div>
-                <div>${getStatusBadge(eff)}</div>
-                ${!isDirector() ? `
-                  <button class="btn-action btn-secondary-action btn-sm" onclick="openCollabStatusModal('${act.id}')">
-                    Alterar Condição
-                  </button>
-                ` : `
-                  <button class="btn-action btn-secondary-action btn-sm" onclick="openActivityModal('${act.id}')">
-                    Editar
-                  </button>
-                `}
-              </div>
-            </div>
-          `;
-        });
-
-        html += `</div></div>`;
-      });
-
-      if (!hasAny) {
-        html = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma atividade cadastrada ou encontrada.</div>`;
-      }
-
-      container.innerHTML = html;
-    }
-=======
-       10. CONFIGURAÇÕES VIEW (DIRETOR)
-       ========================================== */
-    function renderSettings() {
-      const listEl = document.getElementById('deliveryTypesList');
-      if (!listEl) return;
-=======
-       12. INITIALIZATION ON DOM READY
-       ========================================== */
-    document.addEventListener('DOMContentLoaded', () => {
-      loadState();
-      if (state.currentUser) {
-        setupAppForUser();
-      } else {
-        document.getElementById('loginView').style.display = 'flex';
-        document.getElementById('appView').style.display = 'none';
-      }
-    });
-=======
-    /* ==========================================
-       12. INITIALIZATION ON DOM READY
-       ========================================== */
-    document.addEventListener('DOMContentLoaded', async () => {
-      loadState();
-
-      // Check saved Firebase cloud configuration
-      try {
-        const storedCloud = localStorage.getItem(CLOUD_CONFIG_KEY);
-        if (storedCloud) {
-          cloudConfig = JSON.parse(storedCloud);
-          if (cloudConfig && cloudConfig.databaseURL) {
-            updateCloudStatusUI('local', 'Conectando à nuvem...');
-            try {
-              await pullFromCloud(false, false);
-              setupCloudRealtimeListener();
-              updateCloudStatusUI('connected', 'Sincronização ativa.');
-            } catch (e) {
-              updateCloudStatusUI('error', 'Falha ao reconectar à nuvem: ' + e.message);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Erro ao restaurar configuração de nuvem:', e);
-      }
-
-      if (state.currentUser) {
-        setupAppForUser();
-      } else {
-        document.getElementById('loginView').style.display = 'flex';
-        document.getElementById('appView').style.display = 'none';
-      }
-    });==========================================
-       10. CONFIGURAÇÕES VIEW (DIRETOR) & FIREBASE SYNC
-       ========================================== */
-    function sanitizeDbUrl(url) {
-      if (!url) return '';
-      let clean = String(url).trim();
-      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
-        clean = 'https://' + clean;
-      }
-      return clean.replace(/\/+$/, '');
-    }
-
-    function parseFirebaseInput(raw) {
-      if (!raw) return null;
-      let str = raw.trim();
-
-      if (str.includes('.firebaseio.com') && !str.includes('{') && !str.includes('apiKey')) {
-        return { databaseURL: sanitizeDbUrl(str) };
-      }
-
-      try {
-        const parsed = JSON.parse(str);
-        if (parsed.databaseURL || parsed.projectId) {
-          return {
-            apiKey: parsed.apiKey || '',
-            databaseURL: sanitizeDbUrl(parsed.databaseURL || (parsed.projectId ? `https://${parsed.projectId}-default-rtdb.firebaseio.com` : '')),
-            projectId: parsed.projectId || ''
-          };
-        }
-      } catch (_) {}
-
-      try {
-        let cleaned = str.replace(/^(?:const|let|var)\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
-        const dbMatch = cleaned.match(/databaseURL\s*:\s*['"]([^'"]+)['"]/i);
-        const apiMatch = cleaned.match(/apiKey\s*:\s*['"]([^'"]+)['"]/i);
-        const projMatch = cleaned.match(/projectId\s*:\s*['"]([^'"]+)['"]/i);
-
-        let databaseURL = dbMatch ? sanitizeDbUrl(dbMatch[1]) : '';
-        const projectId = projMatch ? projMatch[1].trim() : '';
-        const apiKey = apiMatch ? apiMatch[1].trim() : '';
-
-        if (!databaseURL && projectId) {
-          databaseURL = `https://${projectId}-default-rtdb.firebaseio.com`;
-        }
-
-        if (databaseURL || projectId) {
-          return { databaseURL, projectId, apiKey };
-        }
-      } catch (err) {
-        console.warn('Falha no parse flexível:', err);
-      }
-
-      return null;
-    }
-
-    function updateCloudStatusUI(status, msg = '') {
-      cloudStatus = status;
-      cloudStatusMsg = msg;
-
-      const headerBadge = document.getElementById('headerCloudBadge');
-      const headerText = document.getElementById('headerCloudText');
-      const settingsBadge = document.getElementById('settingsCloudBadge');
-      const settingsText = document.getElementById('settingsCloudText');
-      const feedback = document.getElementById('syncFeedbackMsg');
-
-      let label = 'Modo local';
-      let cls = 'status-local';
-
-      if (status === 'connected') {
-        label = 'Conectado à nuvem';
-        cls = 'status-connected';
-      } else if (status === 'error') {
-        label = 'Erro de conexão';
-        cls = 'status-error';
-      }
-
-      if (headerBadge && headerText) {
-        headerBadge.className = 'cloud-status-badge ' + cls;
-        headerText.textContent = label;
-        headerBadge.title = msg ? `${label}: ${msg}` : label;
-      }
-
-      if (settingsBadge && settingsText) {
-        settingsBadge.className = 'cloud-status-badge ' + cls;
-        settingsText.textContent = label;
-      }
-
-      if (feedback) {
-        if (status === 'connected') {
-          feedback.style.color = 'var(--status-done)';
-          feedback.textContent = msg || 'Conectado com sucesso ao Realtime Database.';
-        } else if (status === 'error') {
-          feedback.style.color = 'var(--status-late)';
-          feedback.textContent = msg || 'Falha ao conectar com a nuvem. Verifique a URL e as permissões.';
-        } else {
-          feedback.style.color = 'var(--text-muted)';
-          feedback.textContent = msg || 'Operando em armazenamento local no navegador.';
-        }
-      }
-    }
-
-    async function connectCloudSync() {
-      if (!isDirector()) {
-        alert('Apenas o perfil Diretor pode configurar a sincronização na nuvem.');
-        return;
-      }
-
-      const textareaVal = document.getElementById('firebaseConfigInput')?.value || '';
-      const urlInputVal = document.getElementById('firebaseDbUrlInput')?.value || '';
-
-      let parsed = parseFirebaseInput(textareaVal);
-      if (!parsed && urlInputVal.trim()) {
-        parsed = { databaseURL: sanitizeDbUrl(urlInputVal) };
-      }
-
-      if (!parsed || !parsed.databaseURL) {
-        updateCloudStatusUI('error', 'Por favor forneça uma Database URL válida do Firebase Realtime Database.');
-        alert('Não foi possível identificar a databaseURL. Cole o objeto de configuração completo do Firebase ou insira a URL direta.');
-        return;
-      }
-
-      cloudConfig = parsed;
-      try {
-        localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(cloudConfig));
-      } catch (_) {}
-
-      try {
-        updateCloudStatusUI('local', 'Tentando conectar ao Realtime Database...');
-        await pullFromCloud(false, true);
-        setupCloudRealtimeListener();
-        updateCloudStatusUI('connected', 'Sincronização ativa em tempo real.');
-        alert('Conexão com a nuvem estabelecida com sucesso!');
-      } catch (err) {
-        console.error('Erro ao conectar ao Firebase:', err);
-        updateCloudStatusUI('error', 'Erro ao acessar o banco na nuvem: ' + err.message);
-        alert('Não foi possível conectar ao Realtime Database: ' + err.message + '\n\nCertifique-se de que o Realtime Database está criado e em modo de teste (regras de leitura e escrita ativas).');
-      }
-    }
-
-    function disconnectCloudSync() {
-      if (!isDirector()) {
-        alert('Apenas o perfil Diretor pode alterar a sincronização.');
-        return;
-      }
-
-      closeCloudRealtimeListener();
-      cloudConfig = null;
-      try {
-        localStorage.removeItem(CLOUD_CONFIG_KEY);
-      } catch (_) {}
-
-      const inputArea = document.getElementById('firebaseConfigInput');
-      const inputUrl = document.getElementById('firebaseDbUrlInput');
-      if (inputArea) inputArea.value = '';
-      if (inputUrl) inputUrl.value = '';
-
-      updateCloudStatusUI('local', 'Desconectado da nuvem. O aplicativo está operando em modo local.');
-      alert('Sincronização desconectada. Os dados continuam salvos localmente.');
-    }
-
-    async function pushToCloud(showNotice = false) {
-      if (!cloudConfig || !cloudConfig.databaseURL) {
-        if (showNotice) alert('Configure e conecte o Firebase antes de enviar dados.');
-        return;
-      }
-
-      const payload = getSyncPayload();
-      const payloadStr = JSON.stringify(payload);
-      lastSavedHash = payloadStr;
-
-      try {
-        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-        const res = await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: payloadStr
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-
-        updateCloudStatusUI('connected', 'Dados sincronizados com a nuvem.');
-        if (showNotice) {
-          alert('Dados locais enviados para a nuvem com sucesso!');
-        }
-      } catch (err) {
-        console.error('Falha no push para nuvem:', err);
-        updateCloudStatusUI('error', 'Falha ao gravar na nuvem: ' + err.message);
-        if (showNotice) {
-          alert('Erro ao enviar dados para a nuvem: ' + err.message);
-        }
-      }
-    }
-
-    async function pullFromCloud(showNotice = false, isInitTest = false) {
-      if (!cloudConfig || !cloudConfig.databaseURL) {
-        if (showNotice) alert('Configure e conecte o Firebase antes de baixar dados.');
-        return;
-      }
-
-      try {
-        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-        const res = await fetch(endpoint, {
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-
-        const data = await res.json();
-
-        if (!data || (!data.plans && !data.activities)) {
-          if (isInitTest) {
-            await pushToCloud(false);
-            return;
-          }
-          if (showNotice) {
-            alert('A nuvem ainda não possui dados salvos. Os dados locais foram preservados.');
-          }
-          return;
-        }
-
-        handleRemoteStateChange(data, 'pull');
-        updateCloudStatusUI('connected', 'Dados atualizados da nuvem.');
-        if (showNotice) {
-          alert('Dados baixados da nuvem e aplicados com sucesso!');
-        }
-      } catch (err) {
-        console.error('Falha no pull da nuvem:', err);
-        updateCloudStatusUI('error', 'Falha ao buscar dados na nuvem: ' + err.message);
-        if (showNotice) {
-          alert('Erro ao baixar dados da nuvem: ' + err.message);
-        }
-        if (isInitTest) throw err;
-      }
-    }
-
-    function handleRemoteStateChange(remoteData, source = 'stream') {
-      if (!remoteData) return;
-
-      const remoteHash = JSON.stringify(remoteData);
-
-      if (remoteHash === lastSavedHash) {
-        return;
-      }
-
-      isApplyingRemoteChange = true;
-      try {
-        const curr = state ? state.currentUser : null;
-
-        const migrated = migrate(remoteData);
-        state = {
-          ...migrated,
-          currentUser: curr
-        };
-
-        if (curr) {
-          const match = state.users.find(u => u.id === curr.id || u.email === curr.email);
-          if (match) {
-            state.currentUser = { ...match };
-            delete state.currentUser.passHash;
-          }
-        }
-
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        lastSavedHash = JSON.stringify(getSyncPayload());
-
-        if (state.currentUser) {
-          populateFilterOptions();
-          showView(currentViewId);
-        }
-      } catch (err) {
-        console.error('Erro ao aplicar atualização remota:', err);
-      } finally {
-        isApplyingRemoteChange = false;
-      }
-    }
-
-    function setupCloudRealtimeListener() {
-      closeCloudRealtimeListener();
-      if (!cloudConfig || !cloudConfig.databaseURL) return;
-
-      const streamUrl = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-
-      try {
-        cloudEventSource = new EventSource(streamUrl);
-
-        cloudEventSource.addEventListener('put', (e) => {
-          try {
-            const parsed = JSON.parse(e.data);
-            if (parsed && parsed.data) {
-              handleRemoteStateChange(parsed.data, 'eventsource_put');
-            }
-          } catch (_) {}
-        });
-
-        cloudEventSource.addEventListener('patch', () => {
-          pullFromCloud(false);
-        });
-
-        cloudEventSource.onerror = (err) => {
-          console.warn('EventSource avisou erro, alternando para polling periódico:', err);
-        };
-      } catch (e) {
-        console.warn('EventSource não pôde ser instanciado:', e);
-      }
-
-      cloudPollInterval = setInterval(() => {
-        if (cloudStatus === 'connected' && cloudConfig) {
-          pullFromCloud(false).catch(() => {});
-        }
-      }, 10000);
-    }
-
-    function closeCloudRealtimeListener() {
-      if (cloudEventSource) {
-        try { cloudEventSource.close(); } catch (_) {}
-        cloudEventSource = null;
-      }
-      if (cloudPollInterval) {
-        clearInterval(cloudPollInterval);
-        cloudPollInterval = null;
-      }
-    }
-
-    function renderSettings() {
-      const listEl = document.getElementById('deliveryTypesList');
-      if (!listEl) return;==========================================
-       4. DASHBOARD & TIMELINE
-       ========================================== */
-    function getFilteredActivitiesForUser() {
-      if (isDirector()) {
-        return state.activities;
-      }
-      return state.activities.filter(a => isUserResponsible(a, state.currentUser.id));
-    }
-
-    function renderDashboard() {
-      const activities = getFilteredActivitiesForUser();
-
-      let countDone = 0;
-      let countProgress = 0;
-      let countLate = 0;
-      let countDelivered = 0;
-
-      activities.forEach(a => {
-        const eff = getEffectiveStatus(a);
-        if (eff === 'Finalizado') countDone++;
-        else if (eff === 'Em atraso') countLate++;
-        else if (eff === 'Em andamento') countProgress++;
-
-        if (a.entregue === true) {
-          countDelivered++;
-        }
-      });
-
-      const totalActs = activities.length;
-      const pctDelivered = totalActs > 0 ? Math.round((countDelivered / totalActs) * 100) : 0;
-
-      document.getElementById('kpi-total').textContent = totalActs;
-      document.getElementById('kpi-done').textContent = countDone;
-      document.getElementById('kpi-progress').textContent = countProgress;
-      document.getElementById('kpi-late').textContent = countLate;
-
-      const kpiDeliveredEl = document.getElementById('kpi-delivered');
-      if (kpiDeliveredEl) {
-        kpiDeliveredEl.textContent = `${countDelivered} de ${totalActs} (${pctDelivered}%)`;
-      }
-
-      // Render Controle de Entregas
-      renderDeliveryControl(activities);
-
-      // Render grouped timeline
-      const today = hojeISO();
-      const in7 = addDaysISO(today, 7);
-      const in30 = addDaysISO(today, 30);
-
-      const groups = {
-        late: { label: '🚨 Em Atraso', color: 'border-late', items: [] },
-        next7: { label: '⚡ Próximos 7 Dias', color: 'border-progress', items: [] },
-        next30: { label: '📅 Próximos 30 Dias', color: 'border-progress', items: [] },
-        future: { label: '⏳ Futuras (+30 Dias)', color: 'border-start', items: [] },
-        done: { label: '✅ Concluídas Recentemente', color: 'border-done', items: [] }
-      };
-
-      activities.forEach(a => {
-        const eff = getEffectiveStatus(a);
-        if (eff === 'Finalizado') {
-          groups.done.items.push(a);
-        } else if (eff === 'Em atraso') {
-          groups.late.items.push(a);
-        } else if (a.dataFinal && a.dataFinal <= in7) {
-          groups.next7.items.push(a);
-        } else if (a.dataFinal && a.dataFinal <= in30) {
-          groups.next30.items.push(a);
-        } else {
-          groups.future.items.push(a);
-        }
-      });
-
-      // Sort items by dataFinal
-      for (const k in groups) {
-        groups[k].items.sort((x, y) => (x.dataFinal || '').localeCompare(y.dataFinal || ''));
-      }
-
-      const container = document.getElementById('timelineContainer');
-      let html = '';
-
-      const groupKeys = ['late', 'next7', 'next30', 'future', 'done'];
-
-      let hasAny = false;
-      groupKeys.forEach(key => {
-        const grp = groups[key];
-        if (grp.items.length === 0) return;
-        hasAny = true;
-
-        html += `
-          <div class="timeline-group">
-            <div class="timeline-group-header">
-              <span class="timeline-group-title">${grp.label}</span>
-              <span class="shell-badge">${grp.items.length} ${grp.items.length === 1 ? 'atividade' : 'atividades'}</span>
-            </div>
-            <div>
-        `;
-
-        grp.items.forEach(act => {
-          const plan = state.plans.find(p => p.id === act.planId);
-          const respNames = getResponsaveisNomes(act);
-          const eff = getEffectiveStatus(act);
-
-          html += `
-            <div class="timeline-card ${grp.color}">
-              <div style="flex: 1; min-width: 250px;">
-                <div style="font-weight: 600; font-size: 0.95rem; margin-bottom: 3px; color: var(--text);">
-                  ${esc(act.nome)}
-                </div>
-                <div style="font-size: 0.8rem; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
-                  <span>📋 Plano: <strong>${esc(plan ? plan.nome : 'Sem plano')}</strong></span>
-                  <span>•</span>
-                  <span>👤 Responsáveis: <strong>${esc(respNames)}</strong></span>
-                  <span class="tag-delivery">${esc(act.tipoEntrega)}</span>
-                  ${act.entregue ? '<span class="badge-status badge-done" style="font-size:0.72rem;">✓ Entregue</span>' : ''}
-                </div>
-              </div>
-
-              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                <div style="text-align: right; font-size: 0.82rem;">
-                  <div style="color: var(--text-muted);">Prazo final</div>
-                  <strong style="color: ${eff === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">${fmtData(act.dataFinal)}</strong>
-                </div>
-                <div>${getStatusBadge(eff)}</div>
-                ${!isDirector() ? `
-                  <button class="btn-action btn-secondary-action btn-sm" onclick="openCollabStatusModal('${act.id}')">
-                    Alterar Condição
-                  </button>
-                ` : `
-                  <button class="btn-action btn-secondary-action btn-sm" onclick="openActivityModal('${act.id}')">
-                    Editar
-                  </button>
-                `}
-              </div>
-            </div>
-          `;
-        });
-
-        html += `</div></div>`;
-      });
-
-      if (!hasAny) {
-        html = `<div style="text-align: center; padding: 2rem; color: var(--text-muted);">Nenhuma atividade cadastrada ou encontrada.</div>`;
-      }
-
-      container.innerHTML = html;
-    }
-
-    /* MELHORIA 2: CONTROLE DE ENTREGAS */
-    function renderDeliveryControl(activities) {
-      const tbody = document.getElementById('deliveryTbody');
-      if (!tbody) return;
-
-      if (!activities || activities.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:1.5rem;">Nenhuma atividade para exibir no controle de entregas.</td></tr>`;
-        return;
-      }
-
-      // Ordenar por data final
-      const sorted = [...activities].sort((a, b) => (a.dataFinal || '').localeCompare(b.dataFinal || ''));
-
-      let html = '';
-      sorted.forEach(act => {
-        const plan = state.plans.find(p => p.id === act.planId);
-        const respNames = getResponsaveisNomes(act);
-        const eff = getEffectiveStatus(act);
-        const canEdit = isDirector() || isUserResponsible(act, state.currentUser.id);
-
-        const isEntregue = act.entregue === true;
-        const isNaoEntregue = act.naoEntregue === true;
-
-        html += `
-          <tr>
-            <td style="font-weight: 600; color: var(--text);">${esc(act.nome)}</td>
-            <td>${esc(plan ? plan.nome : '-')}</td>
-            <td style="font-size: 0.84rem;">${esc(respNames)}</td>
-            <td style="font-size: 0.85rem; color: ${eff === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">${fmtData(act.dataFinal)}</td>
-            <td>${getStatusBadge(eff)}</td>
-            <td style="text-align: center;">
-              <input type="checkbox"
-                ${isEntregue ? 'checked' : ''}
-                ${canEdit ? `onclick="toggleDelivery('${act.id}', 'entregue')"` : 'disabled'}
-                title="${canEdit ? 'Marcar como Entregue (conclui a atividade)' : 'Apenas os responsáveis ou a diretoria podem alterar'}"
-                style="cursor: ${canEdit ? 'pointer' : 'not-allowed'}; width: 17px; height: 17px; accent-color: var(--status-done);">
-            </td>
-            <td style="text-align: center;">
-              <input type="checkbox"
-                ${isNaoEntregue ? 'checked' : ''}
-                ${canEdit ? `onclick="toggleDelivery('${act.id}', 'nao_entregue')"` : 'disabled'}
-                title="${canEdit ? 'Marcar como Não entregue' : 'Apenas os responsáveis ou a diretoria podem alterar'}"
-                style="cursor: ${canEdit ? 'pointer' : 'not-allowed'}; width: 17px; height: 17px; accent-color: var(--status-late);">
-            </td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-    }
-
-    function toggleDelivery(actId, type) {
-      const act = state.activities.find(a => a.id === actId);
-      if (!act) return;
-
-      const canEdit = isDirector() || isUserResponsible(act, state.currentUser.id);
-      if (!canEdit) {
-        alert('Você só pode marcar entregas das atividades em que está designado como responsável.');
-        return;
-      }
-
-      if (type === 'entregue') {
-        if (act.entregue) {
-          // Desmarcar -> volta ao estado neutro
-          act.entregue = false;
-        } else {
-          act.entregue = true;
-          act.naoEntregue = false;
-          // Ao marcar "Entregue", sugerir automaticamente mudar o status para "Finalizado" (aplicar direto e refletir na tela)
-          act.status = 'Finalizado';
-        }
-      } else if (type === 'nao_entregue') {
-        if (act.naoEntregue) {
-          // Desmarcar -> volta ao estado neutro
-          act.naoEntregue = false;
-        } else {
-          act.naoEntregue = true;
-          act.entregue = false;
-          // Ao marcar "Não entregue", não alterar o status automaticamente
-        }
-      }
-
-      saveState();
-      renderDashboard();
-      if (currentViewId === 'activities') renderActivities();
-      if (currentViewId === 'reports') renderReports();
-    }==========================================
-       12. INITIALIZATION ON DOM READY
-       ========================================== */
-    document.addEventListener('DOMContentLoaded', async () => {
-      loadState();
-
-      // Check saved Firebase cloud configuration
-      try {
-        const storedCloud = localStorage.getItem(CLOUD_CONFIG_KEY);
-        if (storedCloud) {
-          cloudConfig = JSON.parse(storedCloud);
-          if (cloudConfig && cloudConfig.databaseURL) {
-            updateCloudStatusUI('local', 'Conectando à nuvem...');
-            try {
-              await pullFromCloud(false, false);
-              setupCloudRealtimeListener();
-              updateCloudStatusUI('connected', 'Sincronização ativa.');
-            } catch (e) {
-              updateCloudStatusUI('error', 'Falha ao reconectar à nuvem: ' + e.message);
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Erro ao restaurar configuração de nuvem:', e);
-      }
-
-      if (state.currentUser) {
-        setupAppForUser();
-      } else {
-        document.getElementById('loginView').style.display = 'flex';
-        document.getElementById('appView').style.display = 'none';
-      }
-    });==========================================
-       10. CONFIGURAÇÕES VIEW (DIRETOR) & FIREBASE SYNC
-       ========================================== */
-    function sanitizeDbUrl(url) {
-      if (!url) return '';
-      let clean = String(url).trim();
-      if (!clean.startsWith('http://') && !clean.startsWith('https://')) {
-        clean = 'https://' + clean;
-      }
-      return clean.replace(/\/+$/, '');
-    }
-
-    function parseFirebaseInput(raw) {
-      if (!raw) return null;
-      let str = raw.trim();
-
-      // If full database URL directly
-      if (str.includes('.firebaseio.com') && !str.includes('{') && !str.includes('apiKey')) {
-        return { databaseURL: sanitizeDbUrl(str) };
-      }
-
-      // Try JSON parse first
-      try {
-        const parsed = JSON.parse(str);
-        if (parsed.databaseURL || parsed.projectId) {
-          return {
-            apiKey: parsed.apiKey || '',
-            databaseURL: sanitizeDbUrl(parsed.databaseURL || (parsed.projectId ? `https://${parsed.projectId}-default-rtdb.firebaseio.com` : '')),
-            projectId: parsed.projectId || ''
-          };
-        }
-      } catch (_) {}
-
-      // Relaxed JS object parsing
-      try {
-        // Strip JS variable assignment if present (e.g. const firebaseConfig =)
-        let cleaned = str.replace(/^(?:const|let|var)\s+\w+\s*=\s*/, '').replace(/;\s*$/, '');
-        // Extract databaseURL
-        const dbMatch = cleaned.match(/databaseURL\s*:\s*['"]([^'"]+)['"]/i);
-        const apiMatch = cleaned.match(/apiKey\s*:\s*['"]([^'"]+)['"]/i);
-        const projMatch = cleaned.match(/projectId\s*:\s*['"]([^'"]+)['"]/i);
-
-        let databaseURL = dbMatch ? sanitizeDbUrl(dbMatch[1]) : '';
-        const projectId = projMatch ? projMatch[1].trim() : '';
-        const apiKey = apiMatch ? apiMatch[1].trim() : '';
-
-        if (!databaseURL && projectId) {
-          databaseURL = `https://${projectId}-default-rtdb.firebaseio.com`;
-        }
-
-        if (databaseURL || projectId) {
-          return { databaseURL, projectId, apiKey };
-        }
-      } catch (err) {
-        console.warn('Falha no parse flexível:', err);
-      }
-
-      return null;
-    }
-
-    function updateCloudStatusUI(status, msg = '') {
-      cloudStatus = status;
-      cloudStatusMsg = msg;
-
-      const headerBadge = document.getElementById('headerCloudBadge');
-      const headerText = document.getElementById('headerCloudText');
-      const settingsBadge = document.getElementById('settingsCloudBadge');
-      const settingsText = document.getElementById('settingsCloudText');
-      const feedback = document.getElementById('syncFeedbackMsg');
-
-      let label = 'Modo local';
-      let cls = 'status-local';
-
-      if (status === 'connected') {
-        label = 'Conectado à nuvem';
-        cls = 'status-connected';
-      } else if (status === 'error') {
-        label = 'Erro de conexão';
-        cls = 'status-error';
-      }
-
-      if (headerBadge && headerText) {
-        headerBadge.className = 'cloud-status-badge ' + cls;
-        headerText.textContent = label;
-        headerBadge.title = msg ? `${label}: ${msg}` : label;
-      }
-
-      if (settingsBadge && settingsText) {
-        settingsBadge.className = 'cloud-status-badge ' + cls;
-        settingsText.textContent = label;
-      }
-
-      if (feedback) {
-        if (status === 'connected') {
-          feedback.style.color = 'var(--status-done)';
-          feedback.textContent = msg || 'Conectado com sucesso ao Realtime Database.';
-        } else if (status === 'error') {
-          feedback.style.color = 'var(--status-late)';
-          feedback.textContent = msg || 'Falha ao conectar com a nuvem. Verifique a URL e as permissões.';
-        } else {
-          feedback.style.color = 'var(--text-muted)';
-          feedback.textContent = msg || 'Operando em armazenamento local no navegador.';
-        }
-      }
-    }
-
-    async function connectCloudSync() {
-      if (!isDirector()) {
-        alert('Apenas o perfil Diretor pode configurar a sincronização na nuvem.');
-        return;
-      }
-
-      const textareaVal = document.getElementById('firebaseConfigInput')?.value || '';
-      const urlInputVal = document.getElementById('firebaseDbUrlInput')?.value || '';
-
-      let parsed = parseFirebaseInput(textareaVal);
-      if (!parsed && urlInputVal.trim()) {
-        parsed = { databaseURL: sanitizeDbUrl(urlInputVal) };
-      }
-
-      if (!parsed || !parsed.databaseURL) {
-        updateCloudStatusUI('error', 'Por favor forneça uma Database URL válida do Firebase Realtime Database.');
-        alert('Não foi possível identificar a databaseURL. Cole o objeto de configuração completo do Firebase ou insira a URL direta.');
-        return;
-      }
-
-      cloudConfig = parsed;
-      try {
-        localStorage.setItem(CLOUD_CONFIG_KEY, JSON.stringify(cloudConfig));
-      } catch (_) {}
-
-      // Test connection by pulling
-      try {
-        updateCloudStatusUI('local', 'Tentando conectar ao Realtime Database...');
-        await pullFromCloud(false, true);
-        setupCloudRealtimeListener();
-        updateCloudStatusUI('connected', 'Sincronização ativa em tempo real.');
-        alert('Conexão com a nuvem estabelecida com sucesso!');
-      } catch (err) {
-        console.error('Erro ao conectar ao Firebase:', err);
-        updateCloudStatusUI('error', 'Erro ao acessar o banco na nuvem: ' + err.message);
-        alert('Não foi possível conectar ao Realtime Database: ' + err.message + '\n\nCertifique-se de que o Realtime Database está criado e em modo de teste (regras de leitura e escrita ativas).');
-      }
-    }
-
-    function disconnectCloudSync() {
-      if (!isDirector()) {
-        alert('Apenas o perfil Diretor pode alterar a sincronização.');
-        return;
-      }
-
-      closeCloudRealtimeListener();
-      cloudConfig = null;
-      try {
-        localStorage.removeItem(CLOUD_CONFIG_KEY);
-      } catch (_) {}
-
-      const inputArea = document.getElementById('firebaseConfigInput');
-      const inputUrl = document.getElementById('firebaseDbUrlInput');
-      if (inputArea) inputArea.value = '';
-      if (inputUrl) inputUrl.value = '';
-
-      updateCloudStatusUI('local', 'Desconectado da nuvem. O aplicativo está operando em modo local.');
-      alert('Sincronização desconectada. Os dados continuam salvos localmente.');
-    }
-
-    async function pushToCloud(showNotice = false) {
-      if (!cloudConfig || !cloudConfig.databaseURL) {
-        if (showNotice) alert('Configure e conecte o Firebase antes de enviar dados.');
-        return;
-      }
-
-      const payload = getSyncPayload();
-      const payloadStr = JSON.stringify(payload);
-      lastSavedHash = payloadStr;
-
-      try {
-        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-        const res = await fetch(endpoint, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: payloadStr
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-
-        updateCloudStatusUI('connected', 'Dados sincronizados com a nuvem.');
-        if (showNotice) {
-          alert('Dados locais enviados para a nuvem com sucesso!');
-        }
-      } catch (err) {
-        console.error('Falha no push para nuvem:', err);
-        updateCloudStatusUI('error', 'Falha ao gravar na nuvem: ' + err.message);
-        if (showNotice) {
-          alert('Erro ao enviar dados para a nuvem: ' + err.message);
-        }
-      }
-    }
-
-    async function pullFromCloud(showNotice = false, isInitTest = false) {
-      if (!cloudConfig || !cloudConfig.databaseURL) {
-        if (showNotice) alert('Configure e conecte o Firebase antes de baixar dados.');
-        return;
-      }
-
-      try {
-        const endpoint = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-        const res = await fetch(endpoint, {
-          headers: { 'Accept': 'application/json' }
-        });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status} ${res.statusText}`);
-        }
-
-        const data = await res.json();
-
-        // If cloud is empty and this is initial connection, push local data to seed cloud
-        if (!data || (!data.plans && !data.activities)) {
-          if (isInitTest) {
-            await pushToCloud(false);
-            return;
-          }
-          if (showNotice) {
-            alert('A nuvem ainda não possui dados salvos. Os dados locais foram preservados.');
-          }
-          return;
-        }
-
-        handleRemoteStateChange(data, 'pull');
-        updateCloudStatusUI('connected', 'Dados atualizados da nuvem.');
-        if (showNotice) {
-          alert('Dados baixados da nuvem e aplicados com sucesso!');
-        }
-      } catch (err) {
-        console.error('Falha no pull da nuvem:', err);
-        updateCloudStatusUI('error', 'Falha ao buscar dados na nuvem: ' + err.message);
-        if (showNotice) {
-          alert('Erro ao baixar dados da nuvem: ' + err.message);
-        }
-        if (isInitTest) throw err;
-      }
-    }
-
-    function handleRemoteStateChange(remoteData, source = 'stream') {
-      if (!remoteData) return;
-
-      const remoteHash = JSON.stringify(remoteData);
-
-      // Anti-echo guard: ignore if it matches our own last save
-      if (remoteHash === lastSavedHash) {
-        return;
-      }
-
-      isApplyingRemoteChange = true;
-      try {
-        // Preserve current user session
-        const curr = state ? state.currentUser : null;
-
-        const migrated = migrate(remoteData);
-        state = {
-          ...migrated,
-          currentUser: curr
-        };
-
-        // If currentUser was deleted or role changed remotely, handle gracefully
-        if (curr) {
-          const match = state.users.find(u => u.id === curr.id || u.email === curr.email);
-          if (match) {
-            state.currentUser = { ...match };
-            delete state.currentUser.passHash;
-          }
-        }
-
-        // Persist to local storage
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        lastSavedHash = JSON.stringify(getSyncPayload());
-
-        // Re-render UI
-        if (state.currentUser) {
-          populateFilterOptions();
-          showView(currentViewId);
-        }
-      } catch (err) {
-        console.error('Erro ao aplicar atualização remota:', err);
-      } finally {
-        isApplyingRemoteChange = false;
-      }
-    }
-
-    function setupCloudRealtimeListener() {
-      closeCloudRealtimeListener();
-      if (!cloudConfig || !cloudConfig.databaseURL) return;
-
-      const streamUrl = `${cloudConfig.databaseURL}/${RTDB_PATH}.json`;
-
-      // 1. Try EventSource (SSE native support in Firebase Realtime Database)
-      try {
-        cloudEventSource = new EventSource(streamUrl);
-
-        cloudEventSource.addEventListener('put', (e) => {
-          try {
-            const parsed = JSON.parse(e.data);
-            if (parsed && parsed.data) {
-              handleRemoteStateChange(parsed.data, 'eventsource_put');
-            }
-          } catch (_) {}
-        });
-
-        cloudEventSource.addEventListener('patch', (e) => {
-          // Fallback to fetch on partial patch
-          pullFromCloud(false);
-        });
-
-        cloudEventSource.onerror = (err) => {
-          // SSE may drop on CORS if unauthenticated, fallback to polling
-          console.warn('EventSource avisou erro, alternando para polling periódico:', err);
-        };
-      } catch (e) {
-        console.warn('EventSource não pôde ser instanciado:', e);
-      }
-
-      // 2. Periodic poll as robust cross-device fallback (every 10 seconds)
-      cloudPollInterval = setInterval(() => {
-        if (cloudStatus === 'connected' && cloudConfig) {
-          pullFromCloud(false).catch(() => {});
-        }
-      }, 10000);
-    }
-
-    function closeCloudRealtimeListener() {
-      if (cloudEventSource) {
-        try { cloudEventSource.close(); } catch (_) {}
-        cloudEventSource = null;
-      }
-      if (cloudPollInterval) {
-        clearInterval(cloudPollInterval);
-        cloudPollInterval = null;
-      }
-    }
-
-    function renderSettings() {
-      const listEl = document.getElementById('deliveryTypesList');
-      if (!listEl) return;==========================================
-       1. CONSTANTS, UTILITIES & STATE STRUCTURE
-       ========================================== */
-    const STORAGE_KEY = 'planos_state_v1';
-    const CLOUD_CONFIG_KEY = 'planos_firebase_config_v1';
-    const RTDB_PATH = 'planos_state_v1';
-
-    // BroadcastChannel for instant local cross-tab sync
-    let syncChannel = null;
-    try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        syncChannel = new BroadcastChannel('planos_tab_channel');
-        syncChannel.onmessage = (evt) => {
-          if (evt.data && evt.data.type === 'STATE_UPDATED') {
-            handleRemoteStateChange(evt.data.payload, 'broadcast');
-          }
-        };
-      }
-    } catch (e) {
-      console.warn('BroadcastChannel não disponível:', e);
-    }Top Navigation & App Layout */
-    .app-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-=======
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
@@ -1305,10 +142,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       flex-direction: column;
     }
 
-    /* Top Navigation & App Layout */
-    .app-header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
+       1. CONSTANTS, UTILITIES & STATE STRUCTURE
+       ========================================== */
+    const STORAGE_KEY = 'planos_state_v1';
 =======
        10. CONFIGURAÇÕES VIEW (DIRETOR)
        ========================================== */
@@ -2419,7 +1255,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         </div>
 
         <!-- KPIS -->
-        <div class="shell-grid" style="grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 1.5rem;">
+        <div class="shell-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 1.5rem;">
           <div class="panel kpi">
             <span class="kpi-label">Total de Atividades</span>
             <span class="kpi-value" id="kpi-total">0</span>
@@ -2435,40 +1271,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           <div class="panel kpi">
             <span class="kpi-label">Em Atraso</span>
             <span class="kpi-value" id="kpi-late" style="color: var(--status-late);">0</span>
-          </div>
-          <div class="panel kpi">
-            <span class="kpi-label">Entregas Confirmadas</span>
-            <span class="kpi-value" id="kpi-delivered" style="color: var(--status-done); font-size: 1.35rem;">0 de 0 (0%)</span>
-          </div>
-        </div>
-
-        <!-- CONTROLE DE ENTREGAS -->
-        <div class="card-panel" style="margin-bottom: 1.5rem;">
-          <div class="panel-header">
-            <div>
-              <h3 style="font-size: 1.1rem; font-weight: 700; margin: 0;">Controle de Entregas</h3>
-              <p style="color: var(--text-muted); font-size: 0.82rem; margin: 2px 0 0;">
-                Confirmação de recebimento/entrega. Marcar "Entregue" altera automaticamente a condição para "Finalizado".
-              </p>
-            </div>
-          </div>
-          <div class="table-container">
-            <table class="custom-table" id="deliveryTable">
-              <thead>
-                <tr>
-                  <th>Atividade</th>
-                  <th>Plano</th>
-                  <th>Responsáveis</th>
-                  <th>Prazo</th>
-                  <th>Status</th>
-                  <th style="text-align: center; width: 100px;">Entregue</th>
-                  <th style="text-align: center; width: 110px;">Não entregue</th>
-                </tr>
-              </thead>
-              <tbody id="deliveryTbody">
-                <!-- Rendered delivery checklist -->
-              </tbody>
-            </table>
           </div>
         </div>
 
@@ -2563,7 +1365,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 <th>Atividade</th>
                 <th>Plano</th>
                 <th>Tipo de Entrega</th>
-                <th>Responsáveis</th>
+                <th>Responsável</th>
                 <th>Início</th>
                 <th>Final</th>
                 <th>Status</th>
@@ -2656,10 +1458,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                   <th>Plano</th>
                   <th>Atividade</th>
                   <th>Tipo de Entrega</th>
-                  <th>Responsáveis</th>
+                  <th>Responsável</th>
                   <th>Início</th>
                   <th>Término</th>
-                  <th>Entregue</th>
                   <th>Condição</th>
                 </tr>
               </thead>
@@ -2811,550 +1612,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     </div>
   </div>
 
-       1. CONSTANTS, UTILITIES & STATE STRUCTURE
-       ========================================== */
-    const STORAGE_KEY = 'planos_state_v1';
-
-    // Simple djb2 hash to avoid plain text comparison in memory
-    function hashPass(str) {
-      let hash = 5381;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash;
-      }
-      return (hash >>> 0).toString(16);
-    }
-
-    function uid() {
-      return 'id_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-    }
-
-    function esc(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function hojeISO() {
-      const d = new Date();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${d.getFullYear()}-${month}-${day}`;
-    }
-
-    function fmtData(isoStr) {
-      if (!isoStr || !/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) return '-';
-      const [y, m, d] = isoStr.split('-');
-      return `${d}/${m}/${y}`;
-    }
-
-    function addDaysISO(isoStr, days) {
-      const d = new Date(isoStr + 'T00:00:00');
-      d.setDate(d.getDate() + days);
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${d.getFullYear()}-${m}-${day}`;
-    }
-
-    // Default Seed Data
-    function getSeedData() {
-      const directorId = 'user_dir_1';
-      const c1Id = 'user_collab_1';
-      const c2Id = 'user_collab_2';
-      const c3Id = 'user_collab_3';
-
-      const plan1Id = 'plan_1';
-      const plan2Id = 'plan_2';
-
-      const today = hojeISO();
-
-      return {
-        version: 1,
-        currentUser: null,
-        deliveryTypes: [
-          'Relatório',
-          'Documento',
-          'Apresentação',
-          'Reunião',
-          'Produto/Material',
-          'Outro'
-        ],
-        users: [
-          {
-            id: directorId,
-            nome: 'Ana Ribeiro (Diretora)',
-            email: 'diretor@demo',
-            passHash: hashPass('admin'),
-            cargo: 'Diretora Geral',
-            role: 'director' // 'director' | 'collab'
-          },
-          {
-            id: c1Id,
-            nome: 'Carlos Eduardo',
-            email: 'carlos@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Analista de Planejamento',
-            role: 'collab'
-          },
-          {
-            id: c2Id,
-            nome: 'Marina Santos',
-            email: 'marina@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Coordenadora de Projetos',
-            role: 'collab'
-          },
-          {
-            id: c3Id,
-            nome: 'Lucas Mendes',
-            email: 'lucas@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Especialista Técnico',
-            role: 'collab'
-          }
-        ],
-        plans: [
-          {
-            id: plan1Id,
-            nome: 'Implantação do Sistema Integrado 2025',
-            descricao: 'Modernização da infraestrutura digital e integração dos setores operacionais.'
-          },
-          {
-            id: plan2Id,
-            nome: 'Reformulação do Portal Institucional e Transparência',
-            descricao: 'Atualização do canal público com adequação às novas diretrizes de acessibilidade.'
-          }
-        ],
-        activities: [
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Levantamento de Requisitos Técnicos',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -30),
-            dataFinal: addDaysISO(today, -15),
-            responsavelId: c1Id,
-            status: 'Finalizado'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Definição da Arquitetura do Banco de Dados',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -14),
-            dataFinal: addDaysISO(today, -2),
-            responsavelId: c3Id,
-            status: 'Iniciado' // will evaluate as late
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Workshop de Alinhamento com Lideranças',
-            tipoEntrega: 'Reunião',
-            dataInicio: addDaysISO(today, -5),
-            dataFinal: addDaysISO(today, 3),
-            responsavelId: c2Id,
-            status: 'Em andamento'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Entrega da Primeira Versão de Testes (Homologação)',
-            tipoEntrega: 'Produto/Material',
-            dataInicio: addDaysISO(today, 2),
-            dataFinal: addDaysISO(today, 12),
-            responsavelId: c3Id,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Relatório Trimestral de Progresso da Implantação',
-            tipoEntrega: 'Relatório',
-            dataInicio: addDaysISO(today, 10),
-            dataFinal: addDaysISO(today, 28),
-            responsavelId: c1Id,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Diagnóstico de Usabilidade e Acessibilidade do Portal',
-            tipoEntrega: 'Relatório',
-            dataInicio: addDaysISO(today, -25),
-            dataFinal: addDaysISO(today, -5),
-            responsavelId: c2Id,
-            status: 'Finalizado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Criação dos Mockups e Guia de Estilos Visuais',
-            tipoEntrega: 'Apresentação',
-            dataInicio: addDaysISO(today, -7),
-            dataFinal: addDaysISO(today, 4),
-            responsavelId: c1Id,
-            status: 'Em andamento'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Aprovação das Minutas de Conteúdo pela Diretoria',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -10),
-            dataFinal: addDaysISO(today, -1),
-            responsavelId: directorId,
-            status: 'Em andamento' // will evaluate as late
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Treinamento dos Editores de Conteúdo',
-            tipoEntrega: 'Reunião',
-            dataInicio: addDaysISO(today, 15),
-            dataFinal: addDaysISO(today, 40),
-            responsavelId: c2Id,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Lançamento Público do Novo Portal',
-            tipoEntrega: 'Produto/Material',
-            dataInicio: addDaysISO(today, 30),
-            dataFinal: addDaysISO(today, 50),
-            responsavelId: c3Id,
-            status: 'Iniciado'
-          }
-        ]
-      };
-    }
-
-    let state = null;
-
-    function migrate(raw) {
-      if (!raw || !raw.version) return getSeedData();
-      return raw;
-    }
-=======
   <!-- APPLICATION LOGIC -->
   <script>
     /* ==========================================
-       1. CONSTANTS, UTILITIES & STATE STRUCTURE
-       ========================================== */
-    const STORAGE_KEY = 'planos_state_v1';
-    const CLOUD_CONFIG_KEY = 'planos_firebase_config_v1';
-    const RTDB_PATH = 'planos_state_v1';
-
-    // BroadcastChannel for instant local cross-tab sync
-    let syncChannel = null;
-    try {
-      if (typeof BroadcastChannel !== 'undefined') {
-        syncChannel = new BroadcastChannel('planos_tab_channel');
-        syncChannel.onmessage = (evt) => {
-          if (evt.data && evt.data.type === 'STATE_UPDATED') {
-            handleRemoteStateChange(evt.data.payload, 'broadcast');
-          }
-        };
-      }
-    } catch (e) {
-      console.warn('BroadcastChannel não disponível:', e);
-    }
-
-    // Simple djb2 hash to avoid plain text comparison in memory
-    function hashPass(str) {
-      let hash = 5381;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) + hash) + str.charCodeAt(i);
-        hash = hash & hash;
-      }
-      return (hash >>> 0).toString(16);
-    }
-
-    function uid() {
-      return 'id_' + Math.random().toString(36).substr(2, 9) + Date.now().toString(36);
-    }
-
-    function esc(str) {
-      if (str === null || str === undefined) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function hojeISO() {
-      const d = new Date();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${d.getFullYear()}-${month}-${day}`;
-    }
-
-    function fmtData(isoStr) {
-      if (!isoStr || !/^\d{4}-\d{2}-\d{2}$/.test(isoStr)) return '-';
-      const [y, m, d] = isoStr.split('-');
-      return `${d}/${m}/${y}`;
-    }
-
-    function addDaysISO(isoStr, days) {
-      const d = new Date(isoStr + 'T00:00:00');
-      d.setDate(d.getDate() + days);
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${d.getFullYear()}-${m}-${day}`;
-    }
-
-    // Default Seed Data
-    function getSeedData() {
-      const directorId = 'user_dir_1';
-      const c1Id = 'user_collab_1';
-      const c2Id = 'user_collab_2';
-      const c3Id = 'user_collab_3';
-
-      const plan1Id = 'plan_1';
-      const plan2Id = 'plan_2';
-
-      const today = hojeISO();
-
-      return {
-        version: 1,
-        currentUser: null,
-        deliveryTypes: [
-          'Relatório',
-          'Documento',
-          'Apresentação',
-          'Reunião',
-          'Produto/Material',
-          'Outro'
-        ],
-        users: [
-          {
-            id: directorId,
-            nome: 'Ana Ribeiro (Diretora)',
-            email: 'diretor@demo',
-            passHash: hashPass('admin'),
-            cargo: 'Diretora Geral',
-            role: 'director' // 'director' | 'collab'
-          },
-          {
-            id: c1Id,
-            nome: 'Carlos Eduardo',
-            email: 'carlos@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Analista de Planejamento',
-            role: 'collab'
-          },
-          {
-            id: c2Id,
-            nome: 'Marina Santos',
-            email: 'marina@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Coordenadora de Projetos',
-            role: 'collab'
-          },
-          {
-            id: c3Id,
-            nome: 'Lucas Mendes',
-            email: 'lucas@demo',
-            passHash: hashPass('1234'),
-            cargo: 'Especialista Técnico',
-            role: 'collab'
-          }
-        ],
-        plans: [
-          {
-            id: plan1Id,
-            nome: 'Implantação do Sistema Integrado 2025',
-            descricao: 'Modernização da infraestrutura digital e integração dos setores operacionais.'
-          },
-          {
-            id: plan2Id,
-            nome: 'Reformulação do Portal Institucional e Transparência',
-            descricao: 'Atualização do canal público com adequação às novas diretrizes de acessibilidade.'
-          }
-        ],
-        activities: [
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Levantamento de Requisitos Técnicos',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -30),
-            dataFinal: addDaysISO(today, -15),
-            responsaveis: [c1Id],
-            entregue: false,
-            status: 'Finalizado'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Definição da Arquitetura do Banco de Dados',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -14),
-            dataFinal: addDaysISO(today, -2),
-            responsaveis: [c3Id],
-            entregue: false,
-            status: 'Iniciado' // will evaluate as late
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Workshop de Alinhamento com Lideranças',
-            tipoEntrega: 'Reunião',
-            dataInicio: addDaysISO(today, -5),
-            dataFinal: addDaysISO(today, 3),
-            responsaveis: [c2Id, c1Id],
-            entregue: false,
-            status: 'Em andamento'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Entrega da Primeira Versão de Testes (Homologação)',
-            tipoEntrega: 'Produto/Material',
-            dataInicio: addDaysISO(today, 2),
-            dataFinal: addDaysISO(today, 12),
-            responsaveis: [c3Id],
-            entregue: false,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan1Id,
-            nome: 'Relatório Trimestral de Progresso da Implantação',
-            tipoEntrega: 'Relatório',
-            dataInicio: addDaysISO(today, 10),
-            dataFinal: addDaysISO(today, 28),
-            responsaveis: [c1Id],
-            entregue: false,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Diagnóstico de Usabilidade e Acessibilidade do Portal',
-            tipoEntrega: 'Relatório',
-            dataInicio: addDaysISO(today, -25),
-            dataFinal: addDaysISO(today, -5),
-            responsaveis: [c2Id],
-            entregue: false,
-            status: 'Finalizado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Criação dos Mockups e Guia de Estilos Visuais',
-            tipoEntrega: 'Apresentação',
-            dataInicio: addDaysISO(today, -7),
-            dataFinal: addDaysISO(today, 4),
-            responsaveis: [c1Id, c2Id],
-            entregue: false,
-            status: 'Em andamento'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Aprovação das Minutas de Conteúdo pela Diretoria',
-            tipoEntrega: 'Documento',
-            dataInicio: addDaysISO(today, -10),
-            dataFinal: addDaysISO(today, -1),
-            responsaveis: [directorId],
-            entregue: false,
-            status: 'Em andamento' // will evaluate as late
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Treinamento dos Editores de Conteúdo',
-            tipoEntrega: 'Reunião',
-            dataInicio: addDaysISO(today, 15),
-            dataFinal: addDaysISO(today, 40),
-            responsaveis: [c2Id],
-            entregue: false,
-            status: 'Iniciado'
-          },
-          {
-            id: uid(),
-            planId: plan2Id,
-            nome: 'Lançamento Público do Novo Portal',
-            tipoEntrega: 'Produto/Material',
-            dataInicio: addDaysISO(today, 30),
-            dataFinal: addDaysISO(today, 50),
-            responsaveis: [c3Id],
-            entregue: false,
-            status: 'Iniciado'
-          }
-        ]
-      };
-    }
-
-    let state = null;
-
-    // Helper functions for Multi-responsaveis & Entregue
-    function getResponsaveisNomes(act) {
-      if (!act) return 'Não atribuído';
-      let ids = [];
-      if (Array.isArray(act.responsaveis) && act.responsaveis.length > 0) {
-        ids = act.responsaveis;
-      } else if (act.responsavelId) {
-        ids = [act.responsavelId];
-      } else if (act.responsavel) {
-        ids = [act.responsavel];
-      }
-
-      if (ids.length === 0) return 'Não atribuído';
-
-      const names = ids.map(id => {
-        const u = state.users.find(user => user.id === id);
-        return u ? u.nome : null;
-      }).filter(Boolean);
-
-      return names.length > 0 ? names.join(', ') : 'Não atribuído';
-    }
-
-    function isUserResponsible(act, userId) {
-      if (!act || !userId) return false;
-      if (Array.isArray(act.responsaveis)) {
-        return act.responsaveis.includes(userId);
-      }
-      return act.responsavelId === userId || act.responsavel === userId;
-    }
-
-    function migrate(raw) {
-      if (!raw || !raw.version) return getSeedData();
-
-      // Compatibility migration for multi-responsaveis and entregue
-      if (Array.isArray(raw.activities)) {
-        raw.activities.forEach(a => {
-          // MELHORIA 1: converte responsavel/responsavelId para array responsaveis
-          if (!Array.isArray(a.responsaveis)) {
-            if (a.responsavelId) {
-              a.responsaveis = [a.responsavelId];
-            } else if (a.responsavel) {
-              a.responsaveis = [a.responsavel];
-            } else {
-              a.responsaveis = [];
-            }
-          }
-
-          // MELHORIA 2: campo entregue (booleano, padrão false)
-          if (typeof a.entregue !== 'boolean') {
-            a.entregue = false;
-          }
-          if (typeof a.naoEntregue !== 'boolean') {
-            a.naoEntregue = false;
-          }
-        });
-      }
-
-      return raw;
-    }==========================================
        1. CONSTANTS, UTILITIES & STATE STRUCTURE
        ========================================== */
     const STORAGE_KEY = 'planos_state_v1';
@@ -4206,7 +2466,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           tipoEntrega: tipo,
           dataInicio: dInicio,
           dataFinal: dFinal,
-          responsaveis: [state.users[0]?.id || '']
+          responsavelId: state.users[0]?.id || ''
         });
       });
 
@@ -4217,7 +2477,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           tipoEntrega: 'Documento',
           dataInicio: today,
           dataFinal: addDaysISO(today, 14),
-          responsaveis: [state.users[0]?.id || '']
+          responsavelId: state.users[0]?.id || ''
         });
       }
 
@@ -4257,7 +2517,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
               tipoEntrega: 'Documento',
               dataInicio: today,
               dataFinal: addDaysISO(today, 15),
-              responsaveis: [state.users[0]?.id || '']
+              responsavelId: state.users[0]?.id || ''
             });
           }
         }
@@ -4265,8 +2525,8 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
       if (draftActivities.length === 0) {
         draftActivities.push(
-          { tempId: uid(), nome: 'Planejamento e Alinhamento do Escopo', tipoEntrega: 'Reunião', dataInicio: today, dataFinal: addDaysISO(today, 7), responsaveis: [state.users[0]?.id || ''] },
-          { tempId: uid(), nome: 'Execução do Plano de Trabalho', tipoEntrega: 'Produto/Material', dataInicio: today, dataFinal: addDaysISO(today, 30), responsaveis: [state.users[0]?.id || ''] }
+          { tempId: uid(), nome: 'Planejamento e Alinhamento do Escopo', tipoEntrega: 'Reunião', dataInicio: today, dataFinal: addDaysISO(today, 7), responsavelId: state.users[0]?.id || '' },
+          { tempId: uid(), nome: 'Execução do Plano de Trabalho', tipoEntrega: 'Produto/Material', dataInicio: today, dataFinal: addDaysISO(today, 30), responsavelId: state.users[0]?.id || '' }
         );
       }
 
@@ -4290,23 +2550,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
     }
 
     function renderReviewModalContent() {
+      const optionsResp = state.users.map(u => `<option value="${u.id}">${esc(u.nome)} (${esc(u.cargo)})</option>`).join('');
+      const optionsTipo = state.deliveryTypes.map(t => `<option value="${esc(t)}">${esc(t)}</option>`).join('');
+
       let rows = '';
       reviewDraftState.activities.forEach((act, idx) => {
-        const respIds = Array.isArray(act.responsaveis) ? act.responsaveis : (act.responsavelId ? [act.responsavelId] : []);
-
-        const collabBoxes = state.users.map(u => {
-          const checked = respIds.includes(u.id) ? 'checked' : '';
-          return `
-            <label style="display:flex; align-items:center; gap:5px; font-size:0.78rem; margin-bottom:2px; cursor:pointer;">
-              <input type="checkbox" ${checked} onchange="toggleDraftActivityResp('${act.tempId}', '${u.id}', this.checked)">
-              <span>${esc(u.nome)}</span>
-            </label>
-          `;
-        }).join('');
-
         rows += `
           <tr id="review-row-${act.tempId}">
-            <td style="min-width: 170px;">
+            <td style="min-width: 180px;">
               <input type="text" class="form-control" value="${esc(act.nome)}" onchange="updateDraftActivity('${act.tempId}', 'nome', this.value)" placeholder="Nome da atividade">
             </td>
             <td>
@@ -4314,10 +2565,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
                 ${state.deliveryTypes.map(t => `<option value="${esc(t)}" ${t === act.tipoEntrega ? 'selected' : ''}>${esc(t)}</option>`).join('')}
               </select>
             </td>
-            <td style="min-width: 160px;">
-              <div style="max-height: 80px; overflow-y: auto; border: 1px solid var(--border); border-radius: 4px; padding: 4px 6px; background: var(--bg);">
-                ${collabBoxes}
-              </div>
+            <td>
+              <select class="form-control" onchange="updateDraftActivity('${act.tempId}', 'responsavelId', this.value)">
+                ${state.users.map(u => `<option value="${u.id}" ${u.id === act.responsavelId ? 'selected' : ''}>${esc(u.nome)}</option>`).join('')}
+              </select>
             </td>
             <td>
               <input type="date" class="form-control" value="${esc(act.dataInicio)}" onchange="updateDraftActivity('${act.tempId}', 'dataInicio', this.value)">
@@ -4383,19 +2634,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       if (item) item[field] = value;
     }
 
-    function toggleDraftActivityResp(tempId, userId, isChecked) {
-      const act = reviewDraftState.activities.find(a => a.tempId === tempId);
-      if (!act) return;
-      if (!Array.isArray(act.responsaveis)) {
-        act.responsaveis = act.responsavelId ? [act.responsavelId] : [];
-      }
-      if (isChecked) {
-        if (!act.responsaveis.includes(userId)) act.responsaveis.push(userId);
-      } else {
-        act.responsaveis = act.responsaveis.filter(id => id !== userId);
-      }
-    }
-
     function addDraftActivity() {
       const today = hojeISO();
       reviewDraftState.activities.push({
@@ -4404,7 +2642,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         tipoEntrega: 'Documento',
         dataInicio: today,
         dataFinal: addDaysISO(today, 15),
-        responsaveis: [state.users[0]?.id || '']
+        responsavelId: state.users[0]?.id || ''
       });
       renderReviewModalContent();
     }
@@ -4428,15 +2666,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         return;
       }
 
-      // Validar se todas as atividades possuem ao menos um responsável
-      for (const act of reviewDraftState.activities) {
-        const resps = Array.isArray(act.responsaveis) ? act.responsaveis : (act.responsavelId ? [act.responsavelId] : []);
-        if (resps.length === 0) {
-          alert(`A atividade "${act.nome}" precisa ter pelo menos um responsável selecionado.`);
-          return;
-        }
-      }
-
       const newPlanId = uid();
       state.plans.push({
         id: newPlanId,
@@ -4445,10 +2674,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       });
 
       reviewDraftState.activities.forEach(act => {
-        const resps = Array.isArray(act.responsaveis) && act.responsaveis.length > 0
-          ? act.responsaveis
-          : (act.responsavelId ? [act.responsavelId] : [state.users[0]?.id || '']);
-
         state.activities.push({
           id: uid(),
           planId: newPlanId,
@@ -4456,9 +2681,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           tipoEntrega: act.tipoEntrega || 'Documento',
           dataInicio: act.dataInicio || hojeISO(),
           dataFinal: act.dataFinal || hojeISO(),
-          responsaveis: resps,
-          entregue: false,
-          naoEntregue: false,
+          responsavelId: act.responsavelId || state.users[0]?.id || '',
           status: 'Iniciado'
         });
       });
@@ -4518,11 +2741,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
       let list = state.activities;
 
-      // Collab only sees activities where they are in responsaveis
+      // Collab only sees their own activities
       if (!isDirector()) {
-        list = list.filter(a => isUserResponsible(a, state.currentUser.id));
+        list = list.filter(a => a.responsavelId === state.currentUser.id);
       } else if (collabFilter) {
-        list = list.filter(a => isUserResponsible(a, collabFilter));
+        list = list.filter(a => a.responsavelId === collabFilter);
       }
 
       if (planFilter) {
@@ -4548,18 +2771,17 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       let html = '';
       list.forEach(act => {
         const plan = state.plans.find(p => p.id === act.planId);
-        const respNames = getResponsaveisNomes(act);
+        const resp = state.users.find(u => u.id === act.responsavelId);
         const effStatus = getEffectiveStatus(act);
 
         html += `
           <tr>
             <td style="font-weight: 600; color: var(--text);">
               ${esc(act.nome)}
-              ${act.entregue ? '<span class="badge-status badge-done" style="margin-left:6px; font-size:0.7rem;">✓ Entregue</span>' : ''}
             </td>
             <td>${esc(plan ? plan.nome : '-')}</td>
             <td><span class="tag-delivery">${esc(act.tipoEntrega)}</span></td>
-            <td>${esc(respNames)}</td>
+            <td>${esc(resp ? resp.nome : 'Não atribuído')}</td>
             <td style="font-size: 0.85rem;">${fmtData(act.dataInicio)}</td>
             <td style="font-size: 0.85rem; font-weight: ${effStatus === 'Em atraso' ? '700' : 'normal'}; color: ${effStatus === 'Em atraso' ? 'var(--status-late)' : 'inherit'};">
               ${fmtData(act.dataFinal)}
@@ -4591,6 +2813,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
         <option value="${p.id}" ${act && act.planId === p.id ? 'selected' : ''}>${esc(p.nome)}</option>
       `).join('');
 
+      const userOptions = state.users.map(u => `
+        <option value="${u.id}" ${act && act.responsavelId === u.id ? 'selected' : ''}>${esc(u.nome)} (${esc(u.cargo)})</option>
+      `).join('');
+
       const typeOptions = state.deliveryTypes.map(t => `
         <option value="${esc(t)}" ${act && act.tipoEntrega === t ? 'selected' : ''}>${esc(t)}</option>
       `).join('');
@@ -4599,21 +2825,6 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       const statusOptions = ['Iniciado', 'Em andamento', 'Finalizado'].map(s => `
         <option value="${s}" ${act && act.status === s ? 'selected' : ''}>${s}</option>
       `).join('');
-
-      // Checkboxes para múltiplos responsáveis
-      const currentResps = act
-        ? (Array.isArray(act.responsaveis) ? act.responsaveis : (act.responsavelId ? [act.responsavelId] : []))
-        : [];
-
-      const collabCheckboxes = state.users.map(u => {
-        const isChecked = currentResps.includes(u.id);
-        return `
-          <label style="display: flex; align-items: center; gap: 8px; font-weight: normal; cursor: pointer; padding: 4px 6px; border-radius: 4px; background: var(--surface);">
-            <input type="checkbox" name="actResponsaveisCheck" value="${u.id}" ${isChecked ? 'checked' : ''} style="accent-color: var(--accent); width: 16px; height: 16px;">
-            <span><strong>${esc(u.nome)}</strong> <span style="color:var(--text-muted); font-size:0.8rem;">(${esc(u.cargo)})</span></span>
-          </label>
-        `;
-      }).join('');
 
       const content = `
         <form id="activityForm" onsubmit="event.preventDefault(); saveActivity('${isEdit ? act.id : ''}');">
@@ -4638,13 +2849,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           </div>
 
           <div class="form-group">
-            <label>Responsáveis pela Atividade * (marque um ou vários)</label>
-            <div id="actResponsaveisContainer" style="display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; padding: 8px; background: var(--bg);">
-              ${collabCheckboxes}
-            </div>
-            <small style="color: var(--text-muted); font-size: 0.78rem;">
-              * Pelo menos um colaborador deve ser marcado como responsável.
-            </small>
+            <label for="actResp">Responsável *</label>
+            <select id="actResp" class="form-control" required>
+              ${userOptions}
+            </select>
           </div>
 
           <div class="form-grid-2">
@@ -4682,20 +2890,12 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       const nome = document.getElementById('actNome').value.trim();
       const planId = document.getElementById('actPlan').value;
       const tipoEntrega = document.getElementById('actTipo').value;
+      const responsavelId = document.getElementById('actResp').value;
       const dataInicio = document.getElementById('actDataIni').value;
       const dataFinal = document.getElementById('actDataFim').value;
       const status = document.getElementById('actStatus').value;
 
-      // Coleta checkboxes de responsáveis
-      const checkedBoxes = document.querySelectorAll('input[name="actResponsaveisCheck"]:checked');
-      const responsaveis = Array.from(checkedBoxes).map(cb => cb.value);
-
-      if (responsaveis.length === 0) {
-        alert('Selecione pelo menos um responsável para a atividade.');
-        return;
-      }
-
-      if (!nome || !planId || !dataInicio || !dataFinal) {
+      if (!nome || !planId || !responsavelId || !dataInicio || !dataFinal) {
         alert('Por favor, preencha todos os campos obrigatórios.');
         return;
       }
@@ -4711,7 +2911,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           act.nome = nome;
           act.planId = planId;
           act.tipoEntrega = tipoEntrega;
-          act.responsaveis = responsaveis;
+          act.responsavelId = responsavelId;
           act.dataInicio = dataInicio;
           act.dataFinal = dataFinal;
           act.status = status;
@@ -4722,9 +2922,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           nome,
           planId,
           tipoEntrega,
-          responsaveis,
-          entregue: false,
-          naoEntregue: false,
+          responsavelId,
           dataInicio,
           dataFinal,
           status
@@ -4799,7 +2997,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
 
       let html = '';
       state.users.forEach(u => {
-        const count = state.activities.filter(a => isUserResponsible(a, u.id)).length;
+        const count = state.activities.filter(a => a.responsavelId === u.id).length;
         const isDir = u.role === 'director';
 
         html += `
@@ -4936,7 +3134,7 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       const user = state.users.find(u => u.id === userId);
       if (!user) return;
 
-      const actCount = state.activities.filter(a => isUserResponsible(a, userId)).length;
+      const actCount = state.activities.filter(a => a.responsavelId === userId).length;
       if (actCount > 0) {
         alert(`Não é possível excluir o colaborador "${user.nome}" pois ele possui ${actCount} atividade(s) vinculada(s). Reatribua as atividades antes de excluir.`);
         return;
@@ -4957,10 +3155,10 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       let list = state.activities;
 
       if (!isDirector()) {
-        list = list.filter(a => isUserResponsible(a, state.currentUser.id));
+        list = list.filter(a => a.responsavelId === state.currentUser.id);
       } else {
         const collabFilter = document.getElementById('repFilterCollab')?.value;
-        if (collabFilter) list = list.filter(a => isUserResponsible(a, collabFilter));
+        if (collabFilter) list = list.filter(a => a.responsavelId === collabFilter);
       }
 
       const planFilter = document.getElementById('repFilterPlan')?.value;
@@ -4979,14 +3177,14 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       if (list.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhuma atividade corresponde aos filtros selecionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">Nenhuma atividade corresponde aos filtros selecionados.</td></tr>`;
         return;
       }
 
       let html = '';
       list.forEach(act => {
         const plan = state.plans.find(p => p.id === act.planId);
-        const respNames = getResponsaveisNomes(act);
+        const resp = state.users.find(u => u.id === act.responsavelId);
         const effStatus = getEffectiveStatus(act);
 
         html += `
@@ -4994,10 +3192,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
             <td><strong>${esc(plan ? plan.nome : '-')}</strong></td>
             <td>${esc(act.nome)}</td>
             <td><span class="tag-delivery">${esc(act.tipoEntrega)}</span></td>
-            <td>${esc(respNames)}</td>
+            <td>${esc(resp ? resp.nome : 'Não atribuído')}</td>
             <td>${fmtData(act.dataInicio)}</td>
             <td>${fmtData(act.dataFinal)}</td>
-            <td>${act.entregue ? '<span class="badge-status badge-done">Sim</span>' : '<span style="color:var(--text-muted);">Não</span>'}</td>
             <td>${getStatusBadge(effStatus)}</td>
           </tr>
         `;
@@ -5014,11 +3211,11 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
       }
 
       // Headers with semicolon delimiter for Excel BR compatibility
-      let csv = 'Plano de Trabalho;Atividade;Tipo de Entrega;Responsáveis;Data de Inicio;Data Final;Entregue;Condicao/Status\r\n';
+      let csv = 'Plano de Trabalho;Atividade;Tipo de Entrega;Responsavel;Data de Inicio;Data Final;Condicao/Status\r\n';
 
       list.forEach(act => {
         const plan = state.plans.find(p => p.id === act.planId);
-        const respNames = getResponsaveisNomes(act);
+        const resp = state.users.find(u => u.id === act.responsavelId);
         const effStatus = getEffectiveStatus(act);
 
         const clean = str => `"${(str || '').replace(/"/g, '""')}"`;
@@ -5027,10 +3224,9 @@ table.shell-table tbody tr:hover { background: color-mix(in srgb, var(--accent) 
           clean(plan ? plan.nome : ''),
           clean(act.nome),
           clean(act.tipoEntrega),
-          clean(respNames),
+          clean(resp ? resp.nome : ''),
           fmtData(act.dataInicio),
           fmtData(act.dataFinal),
-          clean(act.entregue ? 'Sim' : 'Não'),
           clean(effStatus)
         ].join(';');
 
